@@ -97,6 +97,8 @@ describe("solraiser", () => {
     assert.ok(campaignAccount.amountRaised.eq(new BN(0)));
     assert.ok(campaignAccount.deadline.eq(deadline));
     assert.strictEqual(campaignAccount.metadataUrl, metadataUrl);
+    assert.strictEqual(campaignAccount.isWithdrawn, false);
+    assert.ok(campaignAccount.withdrawnAmount.eq(new BN(0)));
   });
 
   it("Donates to a campaign successfully", async () => {
@@ -233,9 +235,82 @@ describe("solraiser", () => {
 
     const creatorAfter = await provider.connection.getBalance(creator.publicKey);
     const campaignAccount = await program.account.campaign.fetch(campaignPda);
+    const campaignBalanceAfter = await provider.connection.getBalance(campaignPda);
 
-    // Goal amount should be transferred out, minus tx fees.
-    assert.ok(campaignAccount.amountRaised.eq(new BN(0))); // Since we donated exactly goal amount
+    // Verify withdrawal was successful
+    assert.ok(campaignAccount.isWithdrawn === true);
+    assert.ok(campaignAccount.amountRaised.eq(goalAmount)); // Historical total unchanged
+    assert.ok(campaignAccount.withdrawnAmount.gt(new BN(0))); // Should have withdrawn something
     assert.ok(creatorAfter > creatorBefore); 
+    
+    // Campaign PDA should only have rent-exempt minimum left
+    // Campaign::LEN = 8 + 32 + 8 + 8 + 8 + 8 + 8 + 4 + 256 + 1 = 341 bytes
+    const CAMPAIGN_SIZE = 341;
+    const rent = await provider.connection.getMinimumBalanceForRentExemption(CAMPAIGN_SIZE);
+    assert.ok(campaignBalanceAfter >= rent && campaignBalanceAfter <= rent + 5000); // Allow small variance
+  });
+
+  it("Allows overfunding (donations beyond goal)", async () => {
+    const campaignId = generateCampaignId();
+    const goalAmount = new BN(1 * LAMPORTS_PER_SOL);
+    const deadline = new BN(Math.floor(Date.now() / 1000) + 3);
+
+    const campaignPda = getCampaignAddress(creator.publicKey, campaignId);
+
+    // Create campaign
+    await program.methods.createCampaign(campaignId, goalAmount, deadline, "overfund_test")
+      .accountsPartial({
+        creator: creator.publicKey,
+        campaignAccount: campaignPda,
+      })
+      .signers([creator])
+      .rpc();
+
+    // Donate to meet goal
+    await program.methods.donate(goalAmount)
+      .accountsPartial({
+        campaignAccount: campaignPda,
+        donor: donor.publicKey,
+      })
+      .signers([donor])
+      .rpc();
+
+    // Donate BEYOND goal (overfunding) - should succeed
+    const overfundAmount = new BN(0.5 * LAMPORTS_PER_SOL);
+    await program.methods.donate(overfundAmount)
+      .accountsPartial({
+        campaignAccount: campaignPda,
+        donor: donor.publicKey,
+      })
+      .signers([donor])
+      .rpc();
+
+    const campaignAccount = await program.account.campaign.fetch(campaignPda);
+    const totalRaised = goalAmount.add(overfundAmount);
+    
+    assert.ok(campaignAccount.amountRaised.eq(totalRaised));
+    assert.ok(campaignAccount.amountRaised.gt(campaignAccount.goalAmount)); // Exceeded goal
+
+    // Wait for deadline
+    await new Promise(r => setTimeout(r, 4000));
+
+    // Withdraw should get ALL funds (goal + overfunding)
+    const creatorBefore = await provider.connection.getBalance(creator.publicKey);
+    
+    await program.methods.withdraw()
+      .accountsPartial({
+        campaignAccount: campaignPda,
+        creator: creator.publicKey,
+      })
+      .signers([creator])
+      .rpc();
+
+    const creatorAfter = await provider.connection.getBalance(creator.publicKey);
+    const finalCampaign = await program.account.campaign.fetch(campaignPda);
+
+    // Verify ALL funds were withdrawn (not just goal_amount)
+    assert.ok(finalCampaign.isWithdrawn === true);
+    assert.ok(finalCampaign.withdrawnAmount.gt(goalAmount)); // Should have withdrawn MORE than goal
+    assert.ok(creatorAfter > creatorBefore);
   });
 });
