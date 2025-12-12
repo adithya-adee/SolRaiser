@@ -28,7 +28,7 @@ pub mod solraiser {
         campaign_account.creator_pubkey = ctx.accounts.creator.key();
         campaign_account.campaign_id = campaign_id;
         campaign_account.goal_amount = goal_amount;
-        campaign_account.amount_raised = 0; // Always start at 0
+        campaign_account.amount_raised = 0;
         campaign_account.deadline = deadline;
         campaign_account.metadata_url = metadata_url;
 
@@ -41,11 +41,29 @@ pub mod solraiser {
     }
 
     pub fn donate(ctx: Context<Donate>, amount: u64) -> Result<()> {
-        let campaign_account = &mut ctx.accounts.campaign_account;
-
         require!(amount > 0, ErrorCode::InvalidAmount);
 
-        campaign_account.amount_raised += amount;
+        let cpi_accounts = anchor_lang::system_program::Transfer {
+            from: ctx.accounts.donor.to_account_info(),
+            to: ctx.accounts.campaign_account.to_account_info(),
+        };
+
+        let cpi_context =
+            CpiContext::new(ctx.accounts.system_program.to_account_info(), cpi_accounts);
+
+        anchor_lang::system_program::transfer(cpi_context, amount)?;
+
+        let campaign_account = &mut ctx.accounts.campaign_account;
+        campaign_account.amount_raised = campaign_account
+            .amount_raised
+            .checked_add(amount)
+            .ok_or(ErrorCode::ArithmeticOverflow)?;
+
+        msg!(
+            "Donation of {} lamports received for campaign {}",
+            amount,
+            campaign_account.campaign_id
+        );
         Ok(())
     }
 
@@ -54,15 +72,54 @@ pub mod solraiser {
 
         require!(
             campaign_account.amount_raised >= campaign_account.goal_amount,
-            ErrorCode::InvalidAmount
+            ErrorCode::GoalNotReached
         );
 
         require!(
-            campaign_account.deadline < Clock::get()?.unix_timestamp,
-            ErrorCode::InvalidDeadline
+            Clock::get()?.unix_timestamp > campaign_account.deadline,
+            ErrorCode::CampaignStillActive
         );
 
-        campaign_account.amount_raised -= campaign_account.goal_amount;
+        let withdraw_amount = campaign_account.goal_amount;
+
+        // Get current lamports for safe transfer
+        let campaign_lamports = campaign_account.to_account_info().lamports();
+        let creator_lamports = ctx.accounts.creator.to_account_info().lamports();
+
+        // Ensure campaign account maintains rent exemption after withdrawal
+        let rent = Rent::get()?;
+        let min_rent = rent.minimum_balance(Campaign::LEN);
+
+        require!(
+            campaign_lamports
+                >= withdraw_amount
+                    .checked_add(min_rent)
+                    .ok_or(ErrorCode::ArithmeticOverflow)?,
+            ErrorCode::InsufficientFunds
+        );
+
+        // Safe lamport transfer with explicit overflow/underflow checks
+        **campaign_account
+            .to_account_info()
+            .try_borrow_mut_lamports()? = campaign_lamports
+            .checked_sub(withdraw_amount)
+            .ok_or(ErrorCode::ArithmeticOverflow)?;
+
+        **ctx
+            .accounts
+            .creator
+            .to_account_info()
+            .try_borrow_mut_lamports()? = creator_lamports
+            .checked_add(withdraw_amount)
+            .ok_or(ErrorCode::ArithmeticOverflow)?;
+
+        // Update campaign state
+        campaign_account.amount_raised = campaign_account
+            .amount_raised
+            .checked_sub(withdraw_amount)
+            .ok_or(ErrorCode::ArithmeticOverflow)?;
+
+        msg!("Withdrawal of {} lamports to creator", withdraw_amount);
         Ok(())
     }
 }
@@ -91,7 +148,8 @@ pub struct Donate<'info> {
         mut,
         seeds = [b"campaign", campaign_account.creator_pubkey.as_ref(), campaign_account.campaign_id.to_le_bytes().as_ref()],
         bump,
-        constraint = campaign_account.amount_raised < campaign_account.goal_amount @ ErrorCode::UnauthorizedWithdraw
+        constraint = campaign_account.amount_raised < campaign_account.goal_amount @ ErrorCode::CampaignGoalReached,
+        constraint = Clock::get()?.unix_timestamp < campaign_account.deadline @ ErrorCode::CampaignExpired
     )]
     pub campaign_account: Account<'info, Campaign>,
 
@@ -110,10 +168,11 @@ pub struct Withdraw<'info> {
     )]
     pub campaign_account: Account<'info, Campaign>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = creator.key() == campaign_account.creator_pubkey @ ErrorCode::UnauthorizedWithdraw
+    )]
     pub creator: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
 }
 
 #[account]
@@ -152,6 +211,18 @@ pub enum ErrorCode {
     MetadataUrlTooLong,
     #[msg("Amount must be greater than 0")]
     InvalidAmount,
-    #[msg("Unauthorized withdrawal")]
+    #[msg("Unauthorized withdrawal - only campaign creator can withdraw")]
     UnauthorizedWithdraw,
+    #[msg("Campaign has already reached its goal")]
+    CampaignGoalReached,
+    #[msg("Campaign deadline has passed")]
+    CampaignExpired,
+    #[msg("Campaign is still active, cannot withdraw yet")]
+    CampaignStillActive,
+    #[msg("Campaign goal has not been reached")]
+    GoalNotReached,
+    #[msg("Arithmetic overflow occurred")]
+    ArithmeticOverflow,
+    #[msg("Insufficient funds - withdrawal would violate rent exemption")]
+    InsufficientFunds,
 }
