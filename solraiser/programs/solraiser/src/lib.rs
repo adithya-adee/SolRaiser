@@ -48,6 +48,23 @@ pub mod solraiser {
         campaign_account.amount_raised += amount;
         Ok(())
     }
+
+    pub fn withdraw(ctx: Context<Withdraw>) -> Result<()> {
+        let campaign_account = &mut ctx.accounts.campaign_account;
+
+        require!(
+            campaign_account.amount_raised >= campaign_account.goal_amount,
+            ErrorCode::InvalidAmount
+        );
+
+        require!(
+            campaign_account.deadline < Clock::get()?.unix_timestamp,
+            ErrorCode::InvalidDeadline
+        );
+
+        campaign_account.amount_raised -= campaign_account.goal_amount;
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -73,12 +90,28 @@ pub struct Donate<'info> {
     #[account(
         mut,
         seeds = [b"campaign", campaign_account.creator_pubkey.as_ref(), campaign_account.campaign_id.to_le_bytes().as_ref()],
-        bump
+        bump,
+        constraint = campaign_account.amount_raised < campaign_account.goal_amount @ ErrorCode::UnauthorizedWithdraw
     )]
     pub campaign_account: Account<'info, Campaign>,
 
     #[account(mut)]
     pub donor: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct Withdraw<'info> {
+    #[account(
+        mut,
+        seeds = [b"campaign", campaign_account.creator_pubkey.as_ref(), campaign_account.campaign_id.to_le_bytes().as_ref()],
+        bump
+    )]
+    pub campaign_account: Account<'info, Campaign>,
+
+    #[account(mut)]
+    pub creator: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -98,16 +131,16 @@ impl Campaign {
     pub const LEN: usize = 8 + 32 + 8 + 8 + 8 + 8 + 4 + Self::MAX_METADATA_URL_LEN; // 8 (discriminator) + fields
 }
 
-#[account]
-pub struct Donation {
-    pub donor_pubkey: Pubkey,
-    pub amount: u64,
-    pub campaign_pubkey: Pubkey,
-}
+// #[account]
+// pub struct Donation {
+//     pub donor_pubkey: Pubkey,
+//     pub amount: u64,
+//     pub campaign_pubkey: Pubkey,
+// }
 
-impl Donation {
-    pub const LEN: usize = 8 + 32 + 8 + 32;
-}
+// impl Donation {
+//     pub const LEN: usize = 8 + 32 + 8 + 32;
+// }
 
 #[error_code]
 pub enum ErrorCode {
@@ -119,4 +152,6 @@ pub enum ErrorCode {
     MetadataUrlTooLong,
     #[msg("Amount must be greater than 0")]
     InvalidAmount,
+    #[msg("Unauthorized withdrawal")]
+    UnauthorizedWithdraw,
 }
