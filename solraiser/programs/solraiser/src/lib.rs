@@ -39,6 +39,15 @@ pub mod solraiser {
         );
         Ok(())
     }
+
+    pub fn donate(ctx: Context<Donate>, amount: u64) -> Result<()> {
+        let campaign_account = &mut ctx.accounts.campaign_account;
+
+        require!(amount > 0, ErrorCode::InvalidAmount);
+
+        campaign_account.amount_raised += amount;
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -55,6 +64,21 @@ pub struct CreateCampaign<'info> {
 
     #[account(mut)]
     pub creator: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct Donate<'info> {
+    #[account(
+        mut,
+        seeds = [b"campaign", campaign_account.creator_pubkey.as_ref(), campaign_account.campaign_id.to_le_bytes().as_ref()],
+        bump
+    )]
+    pub campaign_account: Account<'info, Campaign>,
+
+    #[account(mut)]
+    pub donor: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -93,4 +117,6 @@ pub enum ErrorCode {
     InvalidDeadline,
     #[msg("Metadata URL exceeds maximum length")]
     MetadataUrlTooLong,
+    #[msg("Amount must be greater than 0")]
+    InvalidAmount,
 }
