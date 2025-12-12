@@ -29,15 +29,17 @@ pub mod solraiser {
         campaign.goal_amount = goal_amount;
         campaign.amount_raised = 0;
         campaign.deadline = deadline;
-        campaign.metadata_url = metadata_url;
+        campaign.metadata_url = metadata_url.clone();
         campaign.is_withdrawn = false;
         campaign.withdrawn_amount = 0;
 
-        msg!(
-            "Campaign {} created successfully by {}",
+        emit!(CampaignCreated {
             campaign_id,
-            ctx.accounts.creator.key()
-        );
+            creator_pubkey: ctx.accounts.creator.key(),
+            goal_amount,
+            deadline,
+            metadata_url,
+        });
         Ok(())
     }
 
@@ -66,13 +68,11 @@ pub mod solraiser {
             .checked_add(amount)
             .ok_or(ErrorCode::ArithmeticOverflow)?;
 
-        msg!(
-            "Donation of {} lamports received for campaign {} (total: {}/{})",
+        emit!(CampaignDonated {
+            campaign_id: campaign.campaign_id,
+            donor_pubkey: ctx.accounts.donor.key(),
             amount,
-            campaign.campaign_id,
-            campaign.amount_raised,
-            campaign.goal_amount
-        );
+        });
         Ok(())
     }
 
@@ -109,12 +109,11 @@ pub mod solraiser {
         campaign.is_withdrawn = true;
         campaign.withdrawn_amount = withdraw_amount;
 
-        msg!(
-            "Withdrawal of {} lamports to creator (goal: {}, raised: {})",
-            withdraw_amount,
-            campaign.goal_amount,
-            campaign.amount_raised
-        );
+        emit!(CampaignWithdrawn {
+            campaign_id: campaign.campaign_id,
+            creator_pubkey: ctx.accounts.creator.key(),
+            amount: withdraw_amount,
+        });
         Ok(())
     }
 }
