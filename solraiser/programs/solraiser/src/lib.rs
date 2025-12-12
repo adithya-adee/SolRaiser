@@ -13,7 +13,6 @@ pub mod solraiser {
         deadline: i64,
         metadata_url: String,
     ) -> Result<()> {
-
         require!(goal_amount > 0, ErrorCode::InvalidGoalAmount);
         require!(
             deadline > Clock::get()?.unix_timestamp,
@@ -191,16 +190,28 @@ impl Campaign {
     pub const LEN: usize = 8 + 32 + 8 + 8 + 8 + 8 + 8 + 4 + Self::MAX_METADATA_URL_LEN + 1;
 }
 
-// #[account]
-// pub struct Donation {
-//     pub donor_pubkey: Pubkey,
-//     pub amount: u64,
-//     pub campaign_pubkey: Pubkey,
-// }
+#[event]
+pub struct CampaignCreated {
+    pub campaign_id: u64,
+    pub creator_pubkey: Pubkey,
+    pub goal_amount: u64,
+    pub deadline: i64,
+    pub metadata_url: String,
+}
 
-// impl Donation {
-//     pub const LEN: usize = 8 + 32 + 8 + 32;
-// }
+#[event]
+pub struct CampaignDonated {
+    pub campaign_id: u64,
+    pub donor_pubkey: Pubkey,
+    pub amount: u64,
+}
+
+#[event]
+pub struct CampaignWithdrawn {
+    pub campaign_id: u64,
+    pub creator_pubkey: Pubkey,
+    pub amount: u64,
+}
 
 #[error_code]
 pub enum ErrorCode {
