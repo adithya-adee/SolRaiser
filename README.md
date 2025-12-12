@@ -1,0 +1,2 @@
+# SolRaiser
+decentralized crowdfunding platform
