@@ -10,15 +10,20 @@
     "format": "biome format --write"
   },
   "dependencies": {
+    "@project-serum/anchor": "^0.26.0",
     "@radix-ui/react-slot": "^1.2.4",
-    "@solana/web3.js": "^1.98.4",
-    "@wallet-standard/react": "^1.0.1",
+    "@solana/wallet-adapter-base": "^0.9.23",
+    "@solana/wallet-adapter-phantom": "^0.9.24",
+    "@solana/wallet-adapter-react": "^0.15.35",
+    "@solana/wallet-adapter-react-ui": "^0.9.35",
+    "@solana/wallet-adapter-solflare": "^0.6.28",
+    "@solana/web3.js": "^1.95.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.561.0",
-    "next": "16.0.10",
-    "react": "19.2.1",
-    "react-dom": "19.2.1",
+    "next": "15.5.9",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
