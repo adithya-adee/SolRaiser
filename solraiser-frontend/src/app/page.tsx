@@ -30,7 +30,7 @@ export default function Home() {
       title: "Create Campaign",
       description: "Launch your fundraising campaign on the Solana blockchain",
       icon: "🚀",
-      route: "/create",
+      route: "/create-campaign",
       gradient: "from-blue-500 to-cyan-500",
       hoverGradient: "hover:from-blue-600 hover:to-cyan-600",
     },
