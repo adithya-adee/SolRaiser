@@ -8,11 +8,14 @@ skip-lint = false
 [programs.localnet]
 solraiser = "62NbBCCxPfR83xtgw3AaxKGHyyDdxobrcCGzA7s7LFie"
 
+[programs.devnet]
+solraiser = "62NbBCCxPfR83xtgw3AaxKGHyyDdxobrcCGzA7s7LFie"
+
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
