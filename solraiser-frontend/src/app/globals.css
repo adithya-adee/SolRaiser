@@ -79,6 +79,24 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
+
+  /* SolRaiser Custom Colors */
+  --solraiser-violet-300: 196 181 253;
+  --solraiser-violet-400: 167 139 250;
+  --solraiser-violet-500: 139 92 246;
+  --solraiser-violet-600: 124 58 237;
+  --solraiser-fuchsia-400: 232 121 249;
+  --solraiser-fuchsia-500: 217 70 239;
+  --solraiser-fuchsia-600: 192 38 211;
+  --solraiser-pink-500: 236 72 153;
+  --solraiser-cyan-400: 34 211 238;
+  --solraiser-cyan-500: 6 182 212;
+  --solraiser-blue-400: 96 165 250;
+  --solraiser-blue-500: 59 130 246;
+  --solraiser-blue-600: 37 99 235;
+  --solraiser-slate-800: 30 41 59;
+  --solraiser-green-400: 74 222 128;
+  --solraiser-red-500: 239 68 68;
 }
 
 .dark {

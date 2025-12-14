@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { SunIcon } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import Profile from "@/components/profile";
-import WalletButton from "@/components/ui/wallet-button";
-import { WalletInfo } from "@/lib/utils/wallet-info";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,7 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import WalletButton from "@/components/ui/wallet-button";
+import { WalletInfo } from "@/lib/utils/wallet-info";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -25,6 +26,7 @@ export default function Home() {
 
   const navItems = [
     {
+      id: 1,
       title: "Create Campaign",
       description: "Launch your fundraising campaign on the Solana blockchain",
       icon: "🚀",
@@ -33,6 +35,7 @@ export default function Home() {
       hoverGradient: "hover:from-blue-600 hover:to-cyan-600",
     },
     {
+      id: 2,
       title: "View Campaigns",
       description: "Discover and support amazing projects in our community",
       icon: "🌟",
@@ -41,6 +44,7 @@ export default function Home() {
       hoverGradient: "hover:from-purple-600 hover:to-pink-600",
     },
     {
+      id: 3,
       title: "Your Profile",
       description: "Manage your campaigns and track your contributions",
       icon: "👤",
@@ -49,6 +53,7 @@ export default function Home() {
       hoverGradient: "hover:from-cyan-600 hover:to-blue-600",
     },
     {
+      id: 4,
       title: "Dashboard",
       description:
         "View analytics and insights about your fundraising activity",
@@ -68,7 +73,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <div className="relative w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 via-cyan-500 to-purple-500 p-0.5 animate-pulse">
               <div className="w-full h-full bg-slate-900 rounded-lg flex items-center justify-center text-2xl">
-                ☀️
+                <SunIcon className="text-yellow-500" />
               </div>
             </div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-cyan-400 to-purple-400 bg-clip-text text-transparent">
@@ -106,8 +111,8 @@ export default function Home() {
 
           {/* Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {navItems.map((item, index) => (
-              <Link key={index} href={item.route} className="group">
+            {navItems.map((item) => (
+              <Link key={item.id} href={item.route} className="group">
                 <Card className="card-hover-effect h-full bg-slate-800/40 backdrop-blur-sm border-white/10 hover:border-white/20 overflow-hidden relative">
                   {/* Gradient overlay on hover */}
                   <div
@@ -171,6 +176,15 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {/*Footer Section*/}
+      <footer>
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <p className="text-slate-400 text-xs text-center">
+            &copy; {new Date().getFullYear()} SolRaiser. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
