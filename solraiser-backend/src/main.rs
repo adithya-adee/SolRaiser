@@ -1,20 +1,36 @@
 use axum::{
-    extract::Path,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-    routing::get,
-    Json, Router,
+    Json, Router, extract::Path, http::StatusCode, response::{IntoResponse, Response}, routing::{get, post}
 };
 use serde::{Deserialize, Serialize};
+use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Debug, Clone)]
-struct AppState {}
+struct AppState {
+    pub db: PgPool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CampaignCreateRequest {
+    pub name: String,
+    pub description: String,
+    pub image_url: String,
+    pub target_amount: u64,
+    pub duration: u64,
+    pub creator: String,
+}
 
 #[tokio::main]
-async fn main() {
-    let app_state = Arc::new(AppState {});
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    dotenvy::dotenv().ok();
+
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+    let db_pool = PgPoolOptions::new().connect(&database_url).await?;
+    println!("Database connected successfully");
+
+    let app_state = Arc::new(AppState { db: db_pool });
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -28,15 +44,13 @@ async fn main() {
         .layer(cors)
         .with_state(app_state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:4000")
-        .await
-        .expect("Failed to bind to port 4000");
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:4000").await?;
 
     println!("🚀 Server running on http://0.0.0.0:4000");
 
-    axum::serve(listener, app)
-        .await
-        .expect("Server failed to start");
+    axum::serve(listener, app).await?;
+
+    Ok(())
 }
 
 async fn root() -> &'static str {
