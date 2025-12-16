@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS blocks (
     blockhash VARCHAR(88) NOT NULL,
     parent_slot BIGINT,
     block_time BIGINT,
-    indexed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    indexed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS transactions (
@@ -11,9 +11,9 @@ CREATE TABLE IF NOT EXISTS transactions (
     signature VARCHAR(88) UNIQUE NOT NULL,
     slot BIGINT NOT NULL,
     block_time BIGINT,
-    sucess BOOLEAN NOT NULL,
+    success BOOLEAN NOT NULL,
     fee BIGINT,
-    indexed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    indexed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (slot) REFERENCES blocks(slot)
 );
 
@@ -24,5 +24,5 @@ CREATE TABLE IF NOT EXISTS account_updates (
     lamports BIGINT,
     owner VARCHAR(44),
     data TEXT,
-    indexed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    indexed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

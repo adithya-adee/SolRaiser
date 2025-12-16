@@ -1,5 +1,9 @@
 use axum::{
-    Json, Router, extract::Path, http::StatusCode, response::{IntoResponse, Response}, routing::{get, post}
+    extract::Path,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::{get, post},
+    Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::{PgPool, PgPoolOptions};
