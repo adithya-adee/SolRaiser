@@ -1,2 +1,6 @@
 # Ignore all files in the target directory
 target
+
+# Secret
+.env
+.env.local
