@@ -88,6 +88,8 @@ export default function CreateCampaignPage() {
         },
       });
 
+      //TODO : Send the transaction signature to backend /transaction/create-campaign
+
       // Reset form
       setCampaignId("");
       setGoalAmount("");

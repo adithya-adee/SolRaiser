@@ -15,7 +15,7 @@ impl AppState {
         AppState {
             db,
             rpc_client: Arc::new(RpcClient::new(rpc_url)),
-            /// RwLock for multiple reads and only single write at a time
+            // RwLock for multiple reads and only single write at a time
             last_indexed_slot: Arc::new(RwLock::new(start_slot)),
         }
     }

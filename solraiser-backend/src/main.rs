@@ -6,14 +6,10 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
+use solraiser_backend::{config::Config, state::AppState};
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
-
-#[derive(Debug, Clone)]
-struct AppState {
-    pub db: PgPool,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CampaignCreateRequest {
@@ -27,14 +23,20 @@ pub struct CampaignCreateRequest {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    dotenvy::dotenv().ok();
 
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let config = Config::from_env()?;
 
-    let db_pool = PgPoolOptions::new().connect(&database_url).await?;
-    println!("Database connected successfully");
+    let db_pool = PgPoolOptions::new().connect(&config.database_url).await?;
 
-    let app_state = Arc::new(AppState { db: db_pool });
+    let start_slot = if let Some(slot) = config.start_slot{
+        slot
+    } else {
+        let result = sqlx::query!("SELECT MAX(slot) as max_slot FROM blocks").fetch_one(&db_pool).await?;
+
+        result.max_slot.unwrap_or(0) as u64
+    };
+
+    let app_state = AppState::new(db_pool, config.solana_rpc_url.clone(), start_slot);
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
