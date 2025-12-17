@@ -4,3 +4,9 @@ target
 # Secret
 .env
 .env.local
+
+# migrations
+migrations
+
+# guide
+AXUM_REQUEST_HANDLING_GUIDE.md
