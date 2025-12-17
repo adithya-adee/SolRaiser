@@ -1,14 +1,7 @@
-use axum::{
-    extract::Path,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-    routing::{get, post},
-    Json, Router,
-};
+use axum::{extract::Path, routing::get, Json, Router};
 use serde::{Deserialize, Serialize};
-use solraiser_backend::{config::Config, state::AppState};
-use sqlx::postgres::{PgPool, PgPoolOptions};
-use std::sync::Arc;
+use solraiser_backend::{config::Config, error::AppError, state::AppState};
+use sqlx::postgres::PgPoolOptions;
 use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -23,21 +16,25 @@ pub struct CampaignCreateRequest {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     let config = Config::from_env()?;
 
     let db_pool = PgPoolOptions::new().connect(&config.database_url).await?;
 
-    let start_slot = if let Some(slot) = config.start_slot{
+    let start_slot = if let Some(slot) = config.start_slot {
         slot
     } else {
-        let result = sqlx::query!("SELECT MAX(slot) as max_slot FROM blocks").fetch_one(&db_pool).await?;
+        let max_slot: Option<i64> = sqlx::query_scalar("SELECT MAX(slot) as max_slot FROM blocks")
+            .fetch_one(&db_pool)
+            .await?;
 
-        result.max_slot.unwrap_or(0) as u64
+        max_slot.unwrap_or(0) as u64
     };
 
     let app_state = AppState::new(db_pool, config.solana_rpc_url.clone(), start_slot);
 
+    // TODO: Start Indexer
+
+    // Router
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
@@ -50,9 +47,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(cors)
         .with_state(app_state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:4000").await?;
+    let server_address = format!("{}:{}", config.server_host, config.server_port);
 
-    println!("🚀 Server running on http://0.0.0.0:4000");
+    let listener = tokio::net::TcpListener::bind(server_address).await?;
+
+    println!(
+        "🚀 Server running on http://{}:{}",
+        config.server_host, config.server_port
+    );
 
     axum::serve(listener, app).await?;
 
@@ -131,39 +133,4 @@ async fn get_transaction_by_signature(
     }
 
     Ok(Json(TransactionResponse { signature, data }))
-}
-
-/// Custom Error Handling
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum AppError {
-    BadRequest(String),
-    InternalServerError(String),
-}
-
-impl IntoResponse for AppError {
-    fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
-            AppError::InternalServerError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
-        };
-
-        let body = Json(serde_json::json!({
-            "error": error_message
-        }));
-
-        (status, body).into_response()
-    }
-}
-
-// Convert anyhow errors to AppError
-impl From<anyhow::Error> for AppError {
-    fn from(err: anyhow::Error) -> Self {
-        AppError::InternalServerError(err.to_string())
-    }
-}
-
-impl From<reqwest::Error> for AppError {
-    fn from(err: reqwest::Error) -> Self {
-        AppError::InternalServerError(err.to_string())
-    }
 }
