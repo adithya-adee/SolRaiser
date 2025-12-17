@@ -19,3 +19,5 @@ solana-transaction-status = "3.0.0"
 sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "postgres", "migrate"] }
 chrono = { version = "0.4.42", features = ["serde"] }
 tracing = "0.1"
+borsh = "1.5"
+base64 = "0.22"

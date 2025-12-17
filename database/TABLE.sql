@@ -26,3 +26,19 @@ CREATE TABLE IF NOT EXISTS account_updates (
     data TEXT,
     indexed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS campaign_events (
+    id SERIAL PRIMARY KEY,
+    signature VARCHAR(88) NOT NULL,
+    slot BIGINT NOT NULL,
+    event_type VARCHAR(20) NOT NULL,
+    campaign_id BIGINT NOT NULL,
+    user_pubkey VARCHAR(44) NOT NULL,
+    amount BIGINT,
+    goal_amount BIGINT,
+    deadline BIGINT,
+    metadata_url TEXT,
+    indexed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (signature) REFERENCES transactions(signature) ON DELETE CASCADE,
+    FOREIGN KEY (slot) REFERENCES blocks(slot) ON DELETE CASCADE
+);

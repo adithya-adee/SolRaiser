@@ -2,3 +2,8 @@ CREATE INDEX idx_transactions_slot ON transactions(slot);
 CREATE INDEX idx_transactions_signature ON transactions(signature);
 CREATE INDEX idx_account_updates_pubkey ON account_updates(pubkey);
 CREATE INDEX idx_account_updates_slot ON account_updates(slot);
+CREATE INDEX idx_campaign_events_signature ON campaign_events(signature);
+CREATE INDEX idx_campaign_events_campaign_id ON campaign_events(campaign_id);
+CREATE INDEX idx_campaign_events_user_pubkey ON campaign_events(user_pubkey);
+CREATE INDEX idx_campaign_events_event_type ON campaign_events(event_type);
+CREATE INDEX idx_campaign_events_slot ON campaign_events(slot);
