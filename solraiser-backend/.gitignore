@@ -5,8 +5,9 @@ target
 .env
 .env.local
 
-# migrations
+# sqlx 
+.sqlx
 migrations
 
 # guide
-AXUM_REQUEST_HANDLING_GUIDE.md
+*.md
